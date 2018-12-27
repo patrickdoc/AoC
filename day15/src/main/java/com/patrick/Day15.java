@@ -5,8 +5,11 @@ import  com.patrick.Pair;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.stream.Stream;
 
@@ -104,6 +107,15 @@ public class Day15 {
             this.t = ut;
             this.hp = 200;
         }
+
+        public void move(Pair<Integer, Integer> newPos) {
+            System.out.printf("moving from pos: (%d, %d) to: (%d, %d)\n", pos.fst(), pos.snd(), newPos.fst(), newPos.snd());
+            pos = newPos;
+        }
+
+        public void attack(Unit e) {
+            e.hp -= 3;
+        }
     }
 
     public static String problem1(Board board, Unit[] units) {
@@ -113,6 +125,7 @@ public class Day15 {
         Comparator<Unit> c = Comparator.comparingInt(o -> o.pos.hashCode());
 
         while (fighting) {
+            System.out.printf("Round: %d\n", rounds);
             // Add units to q
             PriorityQueue<Unit> q = new PriorityQueue<>(c);
             for (Unit u : units) {
@@ -120,14 +133,18 @@ public class Day15 {
                     q.add(u);
                 }
             }
+            System.out.printf("Units remaining: %d\n", q.size());
 
             while (!q.isEmpty()) {
                 Unit u = q.poll();
+                if (u.hp < 0) {
+                    continue;
+                }
 
                 // Find targets
                 ArrayList<Unit> targets = new ArrayList<>();
                 for (Unit o : units) {
-                    if (o.t != u.t) {
+                    if (o != null && o.t != u.t) {
                         targets.add(o);
                     }
                 }
@@ -147,6 +164,7 @@ public class Day15 {
                 }
 
                 // If I can't attack, try to move
+                Pair<Integer,Integer> moveTarget = null;
                 if (!canAttack) {
                     // Find squares in range of targets
                     ArrayList<Pair<Integer, Integer>> inRange = new ArrayList<>();
@@ -155,24 +173,58 @@ public class Day15 {
                         Pair<Integer, Integer> down = new Pair<>(e.pos.fst(), e.pos.snd() + 1);
                         Pair<Integer, Integer> left = new Pair<>(e.pos.fst() - 1, e.pos.snd());
                         Pair<Integer, Integer> right = new Pair<>(e.pos.fst() + 1, e.pos.snd());
-                        if (board.getPos(up) == Terrain.G) {
+
+                        if (board.getPos(up) == Terrain.G && !occupied(up, units)) {
                             inRange.add(up);
                         }
-                        if (board.getPos(down) == Terrain.G) {
+                        if (board.getPos(down) == Terrain.G && !occupied(down, units)) {
                             inRange.add(down);
                         }
-                        if (board.getPos(left) == Terrain.G) {
+                        if (board.getPos(left) == Terrain.G && !occupied(left, units)) {
                             inRange.add(left);
                         }
-                        if (board.getPos(right) == Terrain.G) {
+                        if (board.getPos(right) == Terrain.G && !occupied(right, units)) {
                             inRange.add(right);
+                        }
+                    }
+
+                    // Find closest sqaure in range of targets
+                    moveTarget = bfs(board, units, u.pos, inRange);
+                }
+
+                if (moveTarget != null) {
+                    u.move(moveTarget);
+                }
+
+                // Look for someone to fight
+                Unit attackTarget = null;
+                for (Unit e : targets) {
+                    if (dist(u.pos, e.pos) == 1) {
+                        if (attackTarget == null) {
+                            attackTarget = e;
+                        } else {
+                            if (e.hp < attackTarget.hp) {
+                                attackTarget = e;
+                            } else if (e.hp == attackTarget.hp && prio(e.pos, attackTarget.pos) < 0) {
+                                attackTarget = e;
+                            }
                         }
                     }
                 }
 
-                // Find reachable
-            }
+                if (attackTarget != null) {
+                    u.attack(attackTarget);
+                    if (attackTarget.hp <= 0) {
+                        for (int i = 0; i < units.length; i++) {
+                            if (units[i].hp < 0) {
+                                units[i] = null;
+                            }
+                        }
+                    }
+                }
 
+            }
+            rounds++;
         }
 
         int health = 10;
@@ -181,6 +233,107 @@ public class Day15 {
 
     public static int dist(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
         return Math.abs(a.fst() - b.fst()) + Math.abs(a.snd() - b.snd());
+    }
+
+    public static boolean occupied(Pair<Integer, Integer> p, Unit[] units) {
+        for (Unit u : units) {
+            if (u != null && u.pos == p) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Pair<Integer, Integer> bfs(Board b, Unit[] us, Pair<Integer, Integer> pos, ArrayList<Pair<Integer, Integer>> targets) {
+        // Starting at pos, perform a breadth first search for the nearest target
+        HashSet<Pair<Integer, Integer>> seen = new HashSet<>();
+        ArrayDeque<Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>>> toCheck = new ArrayDeque<>();
+        toCheck.add(new Pair(new Pair(pos,0), null));
+
+        Pair<Integer, Integer> result = null;
+        Integer resultDist = null;
+
+        while (true) {
+
+            if (toCheck.isEmpty()) {
+                break;
+            }
+
+            Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>> points = (Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>>) toCheck.pollFirst();
+            Pair<Integer, Integer> from = points.snd();
+            Pair<Integer, Integer> p = points.fst().fst();
+            Integer dist = points.fst().snd();
+
+            // Check if we are done
+            if (result != null && dist > resultDist) {
+                break;
+            }
+            
+            if (seen.contains(p)) {
+                return null;
+            }
+
+            if (targets.contains(p)) {
+                if (result == null || prio(p, result) < 0) {
+                    result = p;
+                    resultDist = dist;
+                }
+            }
+
+            Pair<Integer, Integer> up = new Pair<>(p.fst(), p.snd() - 1);
+            Pair<Integer, Integer> down = new Pair<>(p.fst(), p.snd() + 1);
+            Pair<Integer, Integer> left = new Pair<>(p.fst() - 1, p.snd());
+            Pair<Integer, Integer> right = new Pair<>(p.fst() + 1, p.snd());
+
+            if (!seen.contains(up) && b.getPos(up) == Terrain.G && !occupied(up, us)) {
+                if (from == null) {
+                    toCheck.addLast(new Pair<>(new Pair<>(up, dist + 1), up));
+                } else {
+                    toCheck.addLast(new Pair<>(new Pair<>(up, dist + 1), from));
+                }
+            }
+            if (!seen.contains(up) && b.getPos(left) == Terrain.G && !occupied(left, us)) {
+                if (from == null) {
+                    toCheck.addLast(new Pair<>(new Pair<>(left, dist + 1), left));
+                } else {
+                    toCheck.addLast(new Pair<>(new Pair<>(left, dist + 1), from));
+                }
+            }
+            if (!seen.contains(up) && b.getPos(right) == Terrain.G && !occupied(right, us)) {
+                if (from == null) {
+                    toCheck.addLast(new Pair<>(new Pair<>(right, dist + 1), right));
+                } else {
+                    toCheck.addLast(new Pair<>(new Pair<>(right, dist + 1), from));
+                }
+            }
+            if (!seen.contains(up) && b.getPos(down) == Terrain.G && !occupied(down, us)) {
+                if (from == null) {
+                    toCheck.addLast(new Pair<>(new Pair<>(down, dist + 1), down));
+                } else {
+                    toCheck.addLast(new Pair<>(new Pair<>(down, dist + 1), from));
+                }
+            }
+
+            seen.add(p);
+        }
+
+        return result;
+    }
+
+    public static int prio(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
+        if (a.snd() < b.snd()) {
+            return -1;
+        } else if (a.snd() == b.snd()) {
+            if (a.fst() < b.fst()) {
+                return -1;
+            } else if (a.fst() == b.fst()) {
+                return 0;
+            } else {
+                return 1;
+            }
+        } else {
+            return 1;
+        }
     }
 
     public static long helper() {

@@ -21,7 +21,7 @@ public class Pair<S,T> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Pair that = (Pair) o;
-        return (a == that.a && b == that.b);
+        return (a.equals(that.a) && b.equals(that.b));
     }
 
     // A horrible hashCode implementation. Should work for nums < 5000
