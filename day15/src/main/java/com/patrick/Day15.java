@@ -18,6 +18,9 @@ import java.util.stream.Stream;
  *
  */
 public class Day15 {
+
+    private static int ELF_POWER = 26;
+
     public static void main(String[] args) {
         String fileName = "/input.txt";
 
@@ -68,7 +71,7 @@ public class Day15 {
         return problem1(board, units);
     }
 
-    public enum Terrain {G, W};
+    public enum Terrain {G, W}
 
     public static class Board {
         int width;
@@ -101,20 +104,25 @@ public class Day15 {
         Pair<Integer, Integer> pos;
         UnitType t;
         int hp;
+        int attack;
 
         public Unit(UnitType ut, Pair<Integer,Integer> p) {
             this.pos = p;
             this.t = ut;
+            if (t == UnitType.E) {
+                attack = ELF_POWER;
+            } else {
+                attack = 3;
+            }
             this.hp = 200;
         }
 
         public void move(Pair<Integer, Integer> newPos) {
-            System.out.printf("moving from pos: (%d, %d) to: (%d, %d)\n", pos.fst(), pos.snd(), newPos.fst(), newPos.snd());
             pos = newPos;
         }
 
         public void attack(Unit e) {
-            e.hp -= 3;
+            e.hp -= attack;
         }
     }
 
@@ -188,7 +196,7 @@ public class Day15 {
                         }
                     }
 
-                    // Find closest sqaure in range of targets
+                    // Find closest square in range of targets
                     moveTarget = bfs(board, units, u.pos, inRange);
                 }
 
@@ -216,7 +224,7 @@ public class Day15 {
                     u.attack(attackTarget);
                     if (attackTarget.hp <= 0) {
                         for (int i = 0; i < units.length; i++) {
-                            if (units[i].hp < 0) {
+                            if (units[i] != null && units[i].hp < 0) {
                                 units[i] = null;
                             }
                         }
@@ -227,8 +235,17 @@ public class Day15 {
             rounds++;
         }
 
-        int health = 10;
-        return String.format("Outcome: %d * %d = %d", rounds, health, rounds * health);
+        // Subtract one from rounds, because the last one didn't finish
+        rounds--;
+        int alive = 0;
+        int health = 0;
+        for (int i = 0; i < units.length; i++) {
+            if (units[i] != null) {
+                health += units[i].hp;
+                alive++;
+            }
+        }
+        return String.format("Outcome: (%d units remaining) %d * %d = %d", alive, rounds, health, rounds * health);
     }
 
     public static int dist(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
@@ -237,7 +254,7 @@ public class Day15 {
 
     public static boolean occupied(Pair<Integer, Integer> p, Unit[] units) {
         for (Unit u : units) {
-            if (u != null && u.pos == p) {
+            if (u != null && u.pos.equals(p)) {
                 return true;
             }
         }
@@ -251,6 +268,7 @@ public class Day15 {
         toCheck.add(new Pair(new Pair(pos,0), null));
 
         Pair<Integer, Integer> result = null;
+        Pair<Integer, Integer> bestMove = null;
         Integer resultDist = null;
 
         while (true) {
@@ -259,7 +277,7 @@ public class Day15 {
                 break;
             }
 
-            Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>> points = (Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>>) toCheck.pollFirst();
+            Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>> points = toCheck.pollFirst();
             Pair<Integer, Integer> from = points.snd();
             Pair<Integer, Integer> p = points.fst().fst();
             Integer dist = points.fst().snd();
@@ -270,13 +288,14 @@ public class Day15 {
             }
             
             if (seen.contains(p)) {
-                return null;
+                continue;
             }
 
             if (targets.contains(p)) {
                 if (result == null || prio(p, result) < 0) {
                     result = p;
                     resultDist = dist;
+                    bestMove = from;
                 }
             }
 
@@ -292,21 +311,21 @@ public class Day15 {
                     toCheck.addLast(new Pair<>(new Pair<>(up, dist + 1), from));
                 }
             }
-            if (!seen.contains(up) && b.getPos(left) == Terrain.G && !occupied(left, us)) {
+            if (!seen.contains(left) && b.getPos(left) == Terrain.G && !occupied(left, us)) {
                 if (from == null) {
                     toCheck.addLast(new Pair<>(new Pair<>(left, dist + 1), left));
                 } else {
                     toCheck.addLast(new Pair<>(new Pair<>(left, dist + 1), from));
                 }
             }
-            if (!seen.contains(up) && b.getPos(right) == Terrain.G && !occupied(right, us)) {
+            if (!seen.contains(right) && b.getPos(right) == Terrain.G && !occupied(right, us)) {
                 if (from == null) {
                     toCheck.addLast(new Pair<>(new Pair<>(right, dist + 1), right));
                 } else {
                     toCheck.addLast(new Pair<>(new Pair<>(right, dist + 1), from));
                 }
             }
-            if (!seen.contains(up) && b.getPos(down) == Terrain.G && !occupied(down, us)) {
+            if (!seen.contains(down) && b.getPos(down) == Terrain.G && !occupied(down, us)) {
                 if (from == null) {
                     toCheck.addLast(new Pair<>(new Pair<>(down, dist + 1), down));
                 } else {
@@ -317,7 +336,7 @@ public class Day15 {
             seen.add(p);
         }
 
-        return result;
+        return bestMove;
     }
 
     public static int prio(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {

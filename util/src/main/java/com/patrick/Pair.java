@@ -26,6 +26,6 @@ public class Pair<S,T> {
 
     // A horrible hashCode implementation. Should work for nums < 5000
     public int hashCode() {
-        return a.hashCode() * 10000 + b.hashCode();
+        return b.hashCode() * 10000 + a.hashCode();
     }
 }
