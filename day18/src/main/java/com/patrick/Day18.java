@@ -62,10 +62,20 @@ public class Day18 {
     }
 
     public static String problem1(Terrain[] land) {
-        for (int i = 0; i < 10; i++) {
-            System.out.println("Changing");
-            helper(land);
-            printLand(land);
+        for (int i = 0; i < 50000; i++) {
+            System.out.printf("Generation: %d\n", i);
+            land = helper(land);
+            //printLand(land);
+            int wooded = 0;
+            int lumber = 0;
+            for (int j = 0; j < land.length; j++) {
+                if (land[j] == Terrain.W) {
+                    wooded++;
+                } else if (land[j] == Terrain.L) {
+                    lumber++;
+                }
+            }
+            System.out.printf("Value: %d\n", wooded * lumber);
         }
 
         int wooded = 0;
@@ -82,7 +92,7 @@ public class Day18 {
     }
 
 
-    public static void helper(Terrain[] land) {
+    public static Terrain[] helper(Terrain[] land) {
         Terrain[] next = land.clone();
 
         for (int y = 0; y < HEIGHT; y++) {
@@ -105,7 +115,7 @@ public class Day18 {
             }
         }
 
-        land = next;
+        return next;
     }
 
     public static void printLand(Terrain[] land) {
