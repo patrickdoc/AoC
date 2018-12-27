@@ -11,5 +11,12 @@
 
     <artifactId>day16</artifactId>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.patrick</groupId>
+            <artifactId>util</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 
 </project>
