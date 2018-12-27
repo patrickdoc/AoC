@@ -99,47 +99,74 @@ public class Day17 {
     }
 
     public static String problem1(Integer minY, Integer maxY) {
-        return String.format("Water volume: %d\n",
-                helper(minY, maxY, 500, 0));
+        helper(minY, maxY, 500, 0);
+        printSlice(minY, maxY);
+        int count = 0;
+        for (int y = minY; y <= maxY; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                if (slice[fromPos(x,y)] == Terrain.W) {
+                    count++;
+                }
+            }
+        }
+        return String.format("Water volume: %d\n", count);
     }
 
     public static int fromPos(int x, int y) {
         return y * WIDTH + x;
     }
 
-    public static long helper(Integer minY, Integer maxY,
+    public static boolean helper(Integer minY, Integer maxY,
             Integer x, Integer y) {
-        System.out.printf("Focus on (%d, %d)\n", x, y);
         //printSlice(minY, maxY);
-        // If we are below the maxY, we are worth 0
-        if (y >= maxY) { return 0; }
+        // we are below the bottom, stop
+        if (y > maxY) { return false; }
 
-        // If we are above the min y, we are worth 0
-        int self = y >= minY ? 1 : 0;
+        // If we hit a wall, return true
+        if (slice[fromPos(x, y)] == Terrain.C) { return true; }
+        
+        // If we hit water, stop, but return false
+        if (slice[fromPos(x, y)] == Terrain.W
+                || slice[fromPos(x, y)] == Terrain.F) { return false; }
 
-        // If we are on clay or water, we are worth 0
-        if (slice[fromPos(x, y)] == Terrain.C
-                || slice[fromPos(x,y)] == Terrain.W) { return 0; }
-
-        long down = helper(minY, maxY, x, y+1);
+        // Mark square as falling
         slice[fromPos(x,y)] = Terrain.F;
+        helper(minY, maxY, x, y+1);
         if (slice[fromPos(x,y+1)] == Terrain.C
-                || slice[fromPos(x,y)] == Terrain.W) {
-            long left = helper(minY, maxY, x - 1, y);
-            long right = helper(minY, maxY, x + 1, y);
-            return self + down + left + right;
+                || slice[fromPos(x,y+1)] == Terrain.W) {
+            boolean left = helper(minY, maxY, x - 1, y);
+            boolean right = helper(minY, maxY, x + 1, y);
+            boolean stable = left && right;
+            if (stable) {
+                // Mark row as stable between clay walls
+
+                int xseek = x;
+                while (slice[fromPos(xseek,y)] != Terrain.C) {
+                    xseek--;
+                }
+                xseek++;
+                while (slice[fromPos(xseek,y)] != Terrain.C) {
+                    slice[fromPos(xseek,y)] = Terrain.W;
+                    xseek++;
+                }
+            }
+
+            return left || right;
         } else {
-            return self + down;
+            return false;
         }
     }
 
     public static void printSlice(int minY, int maxY) {
-        for (int y = minY; y < minY + 50; y++) {
+        for (int y = minY; y <= maxY; y++) {
             for (int x = 400; x < 600; x++) {
                 Terrain t = slice[fromPos(x,y)];
                 switch (t) {
                     case C:
                         System.out.print('#');
+                        break;
+                    case F:
+                        System.out.print('|');
                         break;
                     case S:
                         System.out.print('.');
