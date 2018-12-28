@@ -10,6 +10,9 @@ import java.util.stream.Stream;
  *
  */
 public class Day22 {
+
+    public static final long DEPTH = 11817;
+
     public static void main(String[] args) {
         String fileName = "/input.txt";
 
@@ -34,10 +37,53 @@ public class Day22 {
         return 1;
     }
 
-    public static String problem1(long x) {
-        return "1";
+    public static String problem1(long l) {
+        int width = 10;
+        int height = 752;
+
+        Terrain[] cave = new Terrain[width * height];
+
+        int risk = 0;
+        int i = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                switch (type(x, y)) {
+                    case R:
+                        break;
+                    case W:
+                        risk++;
+                        break;
+                    case N:
+                        risk += 2;
+                        break;
+                }
+                i++;
+            }
+        }
+        return String.format("Risk level is: %d\n", risk);
     }
 
+    public enum Terrain {R, W, N}
+
+    public static long geoIx(long x, long y) {
+        if (x == 9 && y == 751) {
+            return 0;
+        } else if (y == 0) {
+            return x * 16807;
+        } else if (x == 0) {
+            return y * 48271;
+        } else {
+            return geoIx(x-1, y) * geoIx(x, y-1);
+        }
+    }
+
+    public static long eroLvl(long x, long y) {
+        return (geoIx(x, y) + DEPTH) % 20183;
+    }
+
+    public static Terrain type(long x, long y) {
+        return Terrain.values()[(int) eroLvl(x, y) % 3];
+    }
 
     public static long helper() {
         return 1;
