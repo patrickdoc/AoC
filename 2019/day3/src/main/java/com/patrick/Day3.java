@@ -3,8 +3,7 @@ package com.patrick;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -26,73 +25,74 @@ public class Day3 {
     }
 
     public static long problem1(Stream<String> lines) {
-        HashMap<Pair, Integer> land = new HashMap();
-        HashSet<Integer> landOwners = new HashSet();
-        lines.map(Claim::new)
-                .mapToInt(x -> addClaim(x, land, landOwners))
-                .sum();
+        String[] line = lines
+                .toArray(String[]::new);
+        Map<Pair<Integer, Integer>, Integer> set1 = p1Helper(line[0]);
+        Map<Pair<Integer, Integer>, Integer> set2 = p1Helper(line[1]);
 
-        System.out.println(landOwners.iterator().next());
-        return 1;
-    }
-
-    private static int addClaim(Claim c, HashMap<Pair, Integer> land, HashSet<Integer> landOwners) {
-        boolean open = true;
-        for (int i = c.origin.a; i < c.origin.a + c.width; i++) {
-            for (int j = c.origin.b; j < c.origin.b + c.height; j++) {
-                Integer other = land.get(new Pair(i, j));
-                if (other != null) {
-                    // Remove other if in owners
-                    landOwners.remove(other);
-                    open = false;
+        Iterator<Pair<Integer, Integer>> it = set2.keySet().iterator();
+        int leastSteps = 10000000;
+        while (it.hasNext()) {
+            Pair<Integer, Integer> p = it.next();
+            if (set1.containsKey(p)) {
+                int steps = set1.get(p) + set2.get(p);
+                if (steps < leastSteps && steps > 0) {
+                    leastSteps = steps;
                 }
-                land.put(new Pair(i,j), c.id);
             }
         }
-        if (open) {
-            landOwners.add(c.id);
-        }
-        return 1;
+
+        return leastSteps;
     }
 
-    private static class Claim {
-        public int id;
-        public Pair origin;
-        public int width;
-        public int height;
+    private static Map<Pair<Integer, Integer>, Integer> p1Helper(String line) {
 
-        public Claim(String line) {
-            String re = "#(\\d+) @ (\\d+),(\\d+): (\\d+)x(\\d+)";
-            Pattern p = Pattern.compile(re);
-            Matcher m = p.matcher(line);
-            if (m.matches()) {
-                id = Integer.parseInt(m.group(1));
-                origin = new Pair(Integer.parseInt(m.group(2)),
-                        Integer.parseInt(m.group(3)));
-                width = Integer.parseInt(m.group(4));
-                height = Integer.parseInt(m.group(5));
+        String[] codes = Arrays
+                .stream(line.split(","))
+                .toArray(String[]::new);
+
+        Map<Pair<Integer,Integer>, Integer> points = new HashMap<>();
+        points.put(new Pair(0,0), 0);
+        int i = 0;
+        int j = 0;
+        int counter = 0;
+
+        for (String s : codes) {
+            Integer dist = Integer.parseInt(s.substring(1));
+            switch (s.charAt(0)) {
+                case 'R':
+                    for (; dist > 0; dist--) {
+                        counter++;
+                        i++;
+                        points.put(new Pair<Integer, Integer>(i, j), counter);
+                    }
+                    break;
+                case 'U':
+                    for (; dist > 0; dist--) {
+                        counter++;
+                        j++;
+                        points.put(new Pair<Integer, Integer>(i, j), counter);
+                    }
+                    break;
+                case 'D':
+                    for (; dist > 0; dist--) {
+                        counter++;
+                        j--;
+                        points.put(new Pair<Integer, Integer>(i, j), counter);
+                    }
+                    break;
+                case 'L':
+                    for (; dist > 0; dist--) {
+                        counter++;
+                        i--;
+                        points.put(new Pair<Integer, Integer>(i, j), counter);
+                    }
+                    break;
+                default:
+                    System.out.println("ERROR");
             }
         }
-    }
 
-    private static class Pair {
-        public int a;
-        public int b;
-
-        public Pair(Integer one, Integer two) {
-            a = one;
-            b = two;
-        }
-
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Pair that = (Pair) o;
-            return (a == that.a && b == that.b);
-        }
-
-        public int hashCode() {
-            return 10000 * a + b;
-        }
+        return points;
     }
 }

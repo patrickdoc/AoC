@@ -20,88 +20,63 @@ public class Day4 {
 
         try (InputStreamReader in = new InputStreamReader(Day4.class.getResourceAsStream(fileName))) {
             Stream<String> stream = new BufferedReader(in).lines();
-            System.out.println(problem1(stream));
+            System.out.println(problem1(134564, 585159));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static long problem1(Stream<String> lines) {
-        String[] events = lines.toArray(String[]::new);
-        Arrays.sort(events);
+    public static long problem1(int low, int high) {
+        int counter = 0;
 
-        String time = "\\[(\\d+)\\-(\\d+)\\-(\\d+) (\\d+):(\\d+)\\] ";
+        for (int x = low; x < high; x++) {
+            if (hasDouble(x) && onlyAscending(x)) {
+                counter++;
+            }
+        }
 
-        HashMap<Integer, Integer[]> guards = new HashMap<>();
-        String guard = time + "Guard #(\\d+).*";
-        Pattern guardP = Pattern.compile(guard);
-        String wake = time + "wakes up";
-        Pattern wakeP = Pattern.compile(wake);
-        String sleep = time + "falls asleep";
-        Pattern sleepP = Pattern.compile(sleep);
+        return counter;
+    }
 
-        Integer currentGuard = null;
-        Integer lastMinute = null;
-
-        for (String s : events) {
-            // New Guard
-            Matcher gm = guardP.matcher(s);
-            if (gm.matches()) {
-                currentGuard = Integer.parseInt(gm.group(6));
-                if (guards.get(currentGuard) == null) {
-                    Integer[] newMins = new Integer[60];
-                    for (int i = 0; i < 60; i++) {
-                        newMins[i] = 0;
+    private static boolean hasDouble(int x) {
+        Integer lastDigit = null;
+        int y = x;
+        boolean dbl = false;
+        boolean reset = false;
+        while (y > 0) {
+            if (lastDigit != null) {
+                if (y % 10 == lastDigit) {
+                    if (dbl) {
+                        reset = true;
                     }
-                    guards.put(currentGuard, newMins);
+                    dbl = true;
+                } else {
+                    if (dbl && !reset) {
+                        return true;
+                    }
+                    reset = false;
+                    dbl = false;
                 }
-                Integer currentHour = Integer.parseInt(gm.group(4));
-                Integer currentMinute = Integer.parseInt(gm.group(5));
-                if (currentHour == 11) {
-                    currentMinute = 0;
-                }
-                lastMinute = currentMinute;
-                continue;
             }
-
-            // Guard falls asleep
-            Matcher sm = sleepP.matcher(s);
-            if (sm.matches()) {
-                Integer currentHour = Integer.parseInt(sm.group(4));
-                Integer currentMinute = Integer.parseInt(sm.group(5));
-                if (currentHour == 11) {
-                    currentMinute = 0;
-                }
-                lastMinute = currentMinute;
-                continue;
-            }
-
-            // Guard wakes up
-            Matcher wm = wakeP.matcher(s);
-            if (wm.matches()) {
-                Integer currentMinute = Integer.parseInt(wm.group(5));
-                Integer[] minutes = guards.get(currentGuard);
-                for (int i = lastMinute; i < currentMinute; i++) {
-                    minutes[i]++;
-                }
-                lastMinute = currentMinute;
-                continue;
-            }
+            lastDigit = y % 10;
+            y /= 10;
         }
 
-        Integer highGuard = null;
-        Integer highMinute = 0;
-        Integer highSleeps = 0;
-        for (Map.Entry e : guards.entrySet()) {
-            Integer[] minutes = (Integer[]) e.getValue();
-            for (int i = 0; i < 60; i++) {
-                if (minutes[i] > highSleeps) {
-                    highSleeps = minutes[i];
-                    highMinute = i;
-                    highGuard = (Integer) e.getKey();
-                }
-            }
-        }
-        return highGuard * highMinute;
+        return dbl && !reset;
+    }
+
+    private static boolean onlyAscending(int x) {
+       Integer lastDigit = null;
+       int y = x;
+       while (y > 0) {
+           if (lastDigit != null) {
+               if (y % 10 > lastDigit) {
+                   return false;
+               }
+           }
+           lastDigit = y % 10;
+           y /= 10;
+       }
+       return true;
     }
 }

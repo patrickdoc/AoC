@@ -3,7 +3,10 @@ package com.patrick;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -17,57 +20,54 @@ public class Day5 {
         try (InputStreamReader in = new InputStreamReader(Day5.class.getResourceAsStream(fileName))) {
             Stream<String> stream = new BufferedReader(in).lines();
             System.out.println(problem1(stream));
+            //System.out.println(problem2(stream));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static long problem1(Stream<String> lines) {
-        String[] events = lines.toArray(String[]::new);
-        String chain = events[0];
+        String line = lines
+                .toArray(String[]::new)[0];
 
-        return react(chain).size();
+        int[] codes = Arrays
+                .stream(line.split(","))
+                .mapToInt(Integer::parseInt)
+                .toArray();
+
+        OpCode prog = new OpCode(codes);
+        return prog.run(5);
     }
 
-    private static Stack<Character> react(String chain) {
-        Stack<Character> agg = new Stack();
-        for (int i = 0; i < chain.length(); i++) {
-            Character head;
-            Character strHead = chain.charAt(i);
-            if (agg.isEmpty()) {
-                agg.push(chain.charAt(i));
-                continue;
-            } else {
-                head = agg.peek();
-            }
+    public static int problem2(Stream<String> lines) {
+        String line = lines
+                .toArray(String[]::new)[0];
 
-            if (head != strHead && Character.toLowerCase(head) == Character.toLowerCase(strHead)) {
-                agg.pop();
-            } else {
-                agg.push(strHead);
+        int[] codes = Arrays
+                .stream(line.split(","))
+                .mapToInt(Integer::parseInt)
+                .toArray();
+
+        int val = 0;
+        for (int i = 0; i < codes.length; i++) {
+            for (int j = 0; j < codes.length; j++) {
+                int[] copy = Arrays.copyOf(codes, codes.length);
+
+                copy[1] = i;
+                copy[2] = j;
+
+                OpCode prog = new OpCode(copy);
+                try {
+                    val = prog.run(0);
+                } catch (Exception e) {
+                    val = 0;
+                }
+                if (val == 19690720) {
+                    System.out.println(i + ", " + j);
+                    return val;
+                }
             }
         }
-
-        return agg;
+        return 0;
     }
-
-    public static long problem2(Stream<String> lines) {
-        String[] events = lines.toArray(String[]::new);
-        String chain = events[0];
-
-        Integer minSize = null;
-        for (char c = 'a'; c <= 'z'; c++) {
-            String replace = "[" + c + Character.toUpperCase(c) + "]";
-            String removeLetter = new String(chain).replaceAll(replace, "");
-
-            Integer size = react(removeLetter).size();
-            if (minSize == null || size < minSize) {
-                minSize = size;
-            }
-        }
-
-        return minSize;
-    }
-
 }
-

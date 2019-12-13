@@ -25,21 +25,22 @@ public class Day8 {
 
         try (InputStreamReader in = new InputStreamReader(Day8.class.getResourceAsStream(fileName))) {
             Stream<String> stream = new BufferedReader(in).lines();
-            System.out.println(problem2(handler(stream)));
+            System.out.println(problem1(handler(stream)));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static IntStream handler(Stream<String> lines) {
+    private static String handler(Stream<String> lines) {
         String[] events = lines.toArray(String[]::new);
 
-        return Arrays.stream(events[0].split("\\s+")).mapToInt(Integer::parseInt);
+        return events[0];
     }
 
-    private static Integer problem1(IntStream is) {
-        Iterator<Integer> ints = is.iterator();
-
+    private static Integer problem1(String s) {
+        for (Character c : s.toCharArray()) {
+            Integer i = Integer.parseInt("" +c);
+        }
         return helper(ints);
     }
 

@@ -17,74 +17,76 @@ public class App {
 
         try (InputStreamReader in = new InputStreamReader(App.class.getResourceAsStream(fileName))) {
             Stream<String> stream = new BufferedReader(in).lines();
-        //    System.out.println(problem1(stream));
-            problem2(stream);
+            System.out.println(problem1(stream));
+            //System.out.println(problem2(stream));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static long problem1(Stream<String> lines) {
-        String[] ids = lines
-              .toArray(String[]::new);
+        String line = lines
+            .toArray(String[]::new)[0];
 
-        long two = Arrays.stream(ids)
-                .filter(x -> checksum(x, 2))
-                .count();
+        int[] codes = Arrays
+            .stream(line.split(","))
+            .mapToInt(Integer::parseInt)
+            .toArray();
 
-        long three = Arrays.stream(ids)
-                .filter(x -> checksum(x, 3))
-                .count();
+        int[] copy = Arrays.copyOf(codes, codes.length);
 
-        return two * three;
+        copy[1] = 12;
+        copy[2] = 2;
+
+        OpCode prog = new OpCode(copy);
+        return prog.run(0);
     }
 
-    // Check if line contains any character count times
-    private static boolean checksum(String line, Integer count) {
-        HashMap<Character, Integer> map = new HashMap();
+    private static int p1Helper(int[] codes) {
+        int ip = 0;
 
-        for (int i = 0; i < line.length(); i++) {
-            Character c = line.charAt(i);
-            Integer current = map.getOrDefault(c, 0);
-            map.put(c, current + 1);
+        // Loop
+        while (true) {
+            if (codes[ip] == 1) {
+                codes[codes[ip + 3]] = codes[codes[ip + 1]] + codes[codes[ip + 2]];
+            } else if (codes[ip] == 2) {
+                codes[codes[ip + 3]] = codes[codes[ip + 1]] * codes[codes[ip + 2]];
+            } else if (codes[ip] == 99) {
+                break;
+            }
+            ip += 4;
         }
-
-        return map.containsValue(count);
+        return codes[0];
     }
 
+    public static int problem2(Stream<String> lines) {
+        String line = lines
+                .toArray(String[]::new)[0];
 
-    public static void problem2(Stream<String> lines) {
-        String[] ids = lines
-                .toArray(String[]::new);
+        int[] codes = Arrays
+                .stream(line.split(","))
+                .mapToInt(Integer::parseInt)
+                .toArray();
 
-        for (int i = 0; i < ids.length; i++) {
-            String id1 = ids[i];
-            for (int j = 0; j < ids.length; j++) {
-                String id2 = ids[j];
+        int val = 0;
+        for (int i = 0; i < codes.length; i++) {
+            for (int j = 0; j < codes.length; j++) {
+                int[] copy = Arrays.copyOf(codes, codes.length);
 
-                if (hammingOne(id1, id2)) {
-                    System.out.println(id1);
-                    System.out.println(id2);
-                    return;
+                copy[1] = i;
+                copy[2] = j;
+
+                try {
+                    val = p1Helper(copy);
+                } catch (Exception e) {
+                    val = 0;
+                }
+                if (val == 19690720) {
+                    System.out.println(i + ", " + j);
+                    return val;
                 }
             }
         }
-
-        return;
-    }
-
-    private static boolean hammingOne(String a, String b) {
-        boolean foundDifference = false;
-        for (int i = 0; i < a.length(); i++) {
-            if (a.charAt(i) != b.charAt(i)) {
-                if (foundDifference) {
-                    return false;
-                } else {
-                    foundDifference = true;
-                }
-            }
-        }
-
-        return foundDifference;
+        return 0;
     }
 }
