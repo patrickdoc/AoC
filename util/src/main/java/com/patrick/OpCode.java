@@ -1,42 +1,43 @@
 package com.patrick;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class OpCode {
 
-    private int[] codes;
+    private long[] codes;
+    private long ip;
+    private long relBase;
 
-    public OpCode(int[] codes) {
-        this.codes = Arrays.copyOf(codes, codes.length);
+    public OpCode(long[] codes) {
+        this.codes = Arrays.copyOf(codes, 10000);
+        this.ip = 0;
+        this.relBase = 0;
     }
 
-    public Deque<Integer> run(Deque<Integer> input) {
-        // Instruction pointer
-        int ip = 0;
+    public Deque<Long> run(Deque<Integer> input) {
 
-        Deque<Integer> output = new ArrayDeque<>();
+        Deque<Long> output = new ArrayDeque<>();
 
         // Loop
         while (true) {
-            int opcode = codes[ip] % 100;
+            long opcode = codes[(int) ip] % 100;
 
             if (opcode == 1) {
-                codes[codes[ip + 3]] = add(ip);
+                codes[(int) codes[(int) ip + 3]] = add(ip);
                 ip += 4;
 
             } else if (opcode == 2) {
-                codes[codes[ip + 3]] = mult(ip);
+                codes[(int) codes[(int) ip + 3]] = mult(ip);
                 ip += 4;
 
             } else if (opcode == 3) {
-                codes[codes[ip + 1]] = input.removeFirst();
+                codes[(int) codes[(int) ip + 1]] = input.removeFirst();
                 ip += 2;
 
             } else if (opcode == 4) {
                 output.addLast(getParam(ip, 1));
                 ip += 2;
+                break;
 
             } else if (opcode == 5) {
                 ip = jneq(ip);
@@ -45,55 +46,73 @@ public class OpCode {
                 ip = jeq(ip);
 
             } else if (opcode == 7) {
-                codes[codes[ip + 3]] = lt(ip);
+                codes[(int) codes[(int) ip + 3]] = lt(ip);
                 ip += 4;
 
             } else if (opcode == 8) {
-                codes[codes[ip + 3]] = eq(ip);
+                codes[(int) codes[(int) ip + 3]] = eq(ip);
                 ip += 4;
+
+            } else if (opcode == 9) {
+                relBase += getParam(ip, 1);
+                ip += 2;
 
             } else if (opcode == 99) {
                 break;
+            } else {
+                throw new RuntimeException("Unknown code");
             }
         }
 
         return output;
     }
 
-    private int getParam(int ip, int pos) {
-        int mode = ((int) (codes[ip] % Math.pow(10, 2+pos))) / (int) Math.pow(10, 1+pos);
-        return codes[mode == 1 ? ip + pos : codes[ip + pos]];
+    private long getParam(long ip, int pos) {
+        int bot = (int) Math.pow(10, 1 + pos);
+        int top = (int) Math.pow(10, 2 + pos);
+        int val = (int) codes[(int) ip];
+        int mode = (val % top) / bot;
+        switch (mode) {
+            case 0:
+                return codes[(int) codes[(int) (ip + pos)]];
+            case 1:
+                return codes[(int) ip + pos];
+            case 2:
+                return codes[(int) relBase + (int) codes[(int) ip + pos]];
+            default:
+                return 1;
+        }
     }
 
-    private int add(int ip) {
-        int p1 = getParam(ip, 1);
-        int p2 = getParam(ip, 2);
+    private long add(long ip) {
+        long p1 = getParam(ip, 1);
+        long p2 = getParam(ip, 2);
         return p1 + p2;
     }
 
-    private int mult(int ip) {
-        int p1 = getParam(ip, 1);
-        int p2 = getParam(ip, 2);
+    private long mult(long ip) {
+        long p1 = getParam(ip, 1);
+        long p2 = getParam(ip, 2);
         return p1 * p2;
     }
 
-    private int lt(int ip) {
-        int p1 = getParam(ip, 1);
-        int p2 = getParam(ip, 2);
+    private long lt(long ip) {
+        long p1 = getParam(ip, 1);
+        long p2 = getParam(ip, 2);
         return p1 < p2 ? 1 : 0;
     }
 
-    private int jeq(int ip) {
+    private long jeq(long ip) {
         return getParam(ip, 1) == 0 ? getParam(ip, 2) : ip + 3;
     }
 
-    private int jneq(int ip) {
+    private long jneq(long ip) {
         return getParam(ip, 1) != 0 ? getParam(ip, 2) : ip + 3;
     }
 
-    private int eq(int ip) {
-        int p1 = getParam(ip, 1);
-        int p2 = getParam(ip, 2);
+    private long eq(long ip) {
+        long p1 = getParam(ip, 1);
+        long p2 = getParam(ip, 2);
         return p1 == p2 ? 1 : 0;
     }
 }
