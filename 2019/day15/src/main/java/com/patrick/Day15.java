@@ -3,11 +3,7 @@ package com.patrick;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -16,21 +12,19 @@ import java.util.stream.Stream;
  */
 public class Day15 {
 
-    private static int ELF_POWER = 26;
-
     public static void main(String[] args) {
         String fileName = "/input.txt";
 
         try (InputStreamReader in = new InputStreamReader(Day15.class.getResourceAsStream(fileName))) {
             Stream<String> stream = new BufferedReader(in).lines();
-            System.out.println(handler(stream));
+            //System.out.println(handler(stream));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        try (InputStreamReader in = new InputStreamReader(Day15.class.getResourceAsStream(fileName))) {
+        try (InputStreamReader in = new InputStreamReader(Day15.class.getResourceAsStream("/board.txt"))) {
             Stream<String> stream = new BufferedReader(in).lines();
-            //System.out.println(problem2(handler(stream)));
+            System.out.println(helper(stream));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -38,326 +32,149 @@ public class Day15 {
 
     public static String handler(Stream<String> lines) {
         String[] events = lines.toArray(String[]::new);
-        Board board = new Board(events[0].length(), events.length);
-        Unit[] units = new Unit[30];
-
-
-        int u = 0;
-        // Process board input
-        for (int j = 0; j < events.length; j++) {
-            for (int i = 0; i < events[j].length(); i++) {
-                char c = events[j].charAt(i);
-                if (c == '#') {
-                    board.setPos(new Pair<>(i, j), Terrain.W);
-                } else if (c == '.') {
-                    board.setPos(new Pair<>(i, j), Terrain.G);
-                } else if (c == 'G') {
-                    board.setPos(new Pair<>(i, j), Terrain.G);
-                    units[u] = new Unit(UnitType.G, new Pair<>(i,j));
-                    u++;
-                } else if (c == 'E') {
-                    board.setPos(new Pair<>(i, j), Terrain.G);
-                    units[u] = new Unit(UnitType.E, new Pair<>(i,j));
-                    u++;
-                } else {
-                    return String.format("Bad input: %c\n", c);
-                }
-            }
-        }
-
-        return problem1(board, units);
+        long[] codes = Arrays.stream(events[0].split(","))
+                .mapToLong(Long::parseLong)
+                .toArray();
+        return problem1(codes);
     }
 
-    public enum Terrain {G, W}
+    public static String problem1(long[] codes) {
 
-    public static class Board {
-        int width;
-        int height;
-        Terrain[] board;
-
-        public Board(int w, int h) {
-            width = w;
-            height = h;
-            board = new Terrain[width * height];
+        int width = 50;
+        long[] board = new long[width * width];
+        for (int i = 0; i < board.length; i++) {
+            board[i] = 0;
         }
 
-        public void setPos(Pair<Integer,Integer> pos, Terrain t) {
-            board[pos.snd() * width + pos.fst()] = t;
-        }
+        OpCode prog = new OpCode(codes);
+        Deque<Integer> input = new ArrayDeque<>();
+        Deque<Long> output = new ArrayDeque<>();
 
-        public Terrain getPos(Pair<Integer, Integer> pos) {
-            if (pos.fst() >= 0 && pos.fst() < width
-                    && pos.snd() >= 0 && pos.snd() < height) {
-                return board[pos.snd() * width + pos.fst()];
-            } else {
-                return Terrain.W;
-            }
-        }
-    }
-
-    public enum UnitType {G, E};
-
-    public static class Unit {
-        Pair<Integer, Integer> pos;
-        UnitType t;
-        int hp;
-        int attack;
-
-        public Unit(UnitType ut, Pair<Integer,Integer> p) {
-            this.pos = p;
-            this.t = ut;
-            if (t == UnitType.E) {
-                attack = ELF_POWER;
-            } else {
-                attack = 3;
-            }
-            this.hp = 200;
-        }
-
-        public void move(Pair<Integer, Integer> newPos) {
-            pos = newPos;
-        }
-
-        public void attack(Unit e) {
-            e.hp -= attack;
-        }
-    }
-
-    public static String problem1(Board board, Unit[] units) {
-        boolean fighting = true;
-        int rounds = 0;
-
-        Comparator<Unit> c = Comparator.comparingInt(o -> o.pos.hashCode());
-
-        while (fighting) {
-            System.out.printf("Round: %d\n", rounds);
-            // Add units to q
-            PriorityQueue<Unit> q = new PriorityQueue<>(c);
-            for (Unit u : units) {
-                if (u != null) {
-                    q.add(u);
-                }
-            }
-            System.out.printf("Units remaining: %d\n", q.size());
-
-            while (!q.isEmpty()) {
-                Unit u = q.poll();
-                if (u.hp < 0) {
-                    continue;
-                }
-
-                // Find targets
-                ArrayList<Unit> targets = new ArrayList<>();
-                for (Unit o : units) {
-                    if (o != null && o.t != u.t) {
-                        targets.add(o);
-                    }
-                }
-
-                // No more enemies remain, end the game
-                if (targets.size() == 0) {
-                    fighting = false;
-                    break;
-                }
-
-                // Check if target next to unit
-                boolean canAttack = false;
-                for (Unit e : targets) {
-                    if (dist(u.pos, e.pos) == 1) {
-                        canAttack = true;
-                    }
-                }
-
-                // If I can't attack, try to move
-                Pair<Integer,Integer> moveTarget = null;
-                if (!canAttack) {
-                    // Find squares in range of targets
-                    ArrayList<Pair<Integer, Integer>> inRange = new ArrayList<>();
-                    for (Unit e : targets) {
-                        Pair<Integer, Integer> up = new Pair<>(e.pos.fst(), e.pos.snd() - 1);
-                        Pair<Integer, Integer> down = new Pair<>(e.pos.fst(), e.pos.snd() + 1);
-                        Pair<Integer, Integer> left = new Pair<>(e.pos.fst() - 1, e.pos.snd());
-                        Pair<Integer, Integer> right = new Pair<>(e.pos.fst() + 1, e.pos.snd());
-
-                        if (board.getPos(up) == Terrain.G && !occupied(up, units)) {
-                            inRange.add(up);
-                        }
-                        if (board.getPos(down) == Terrain.G && !occupied(down, units)) {
-                            inRange.add(down);
-                        }
-                        if (board.getPos(left) == Terrain.G && !occupied(left, units)) {
-                            inRange.add(left);
-                        }
-                        if (board.getPos(right) == Terrain.G && !occupied(right, units)) {
-                            inRange.add(right);
-                        }
-                    }
-
-                    // Find closest square in range of targets
-                    moveTarget = bfs(board, units, u.pos, inRange);
-                }
-
-                if (moveTarget != null) {
-                    u.move(moveTarget);
-                }
-
-                // Look for someone to fight
-                Unit attackTarget = null;
-                for (Unit e : targets) {
-                    if (dist(u.pos, e.pos) == 1) {
-                        if (attackTarget == null) {
-                            attackTarget = e;
-                        } else {
-                            if (e.hp < attackTarget.hp) {
-                                attackTarget = e;
-                            } else if (e.hp == attackTarget.hp && prio(e.pos, attackTarget.pos) < 0) {
-                                attackTarget = e;
-                            }
-                        }
-                    }
-                }
-
-                if (attackTarget != null) {
-                    u.attack(attackTarget);
-                    if (attackTarget.hp <= 0) {
-                        for (int i = 0; i < units.length; i++) {
-                            if (units[i] != null && units[i].hp < 0) {
-                                units[i] = null;
-                            }
-                        }
-                    }
-                }
-
-            }
-            rounds++;
-        }
-
-        // Subtract one from rounds, because the last one didn't finish
-        rounds--;
-        int alive = 0;
-        int health = 0;
-        for (int i = 0; i < units.length; i++) {
-            if (units[i] != null) {
-                health += units[i].hp;
-                alive++;
-            }
-        }
-        return String.format("Outcome: (%d units remaining) %d * %d = %d", alive, rounds, health, rounds * health);
-    }
-
-    public static int dist(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
-        return Math.abs(a.fst() - b.fst()) + Math.abs(a.snd() - b.snd());
-    }
-
-    public static boolean occupied(Pair<Integer, Integer> p, Unit[] units) {
-        for (Unit u : units) {
-            if (u != null && u.pos.equals(p)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static Pair<Integer, Integer> bfs(Board b, Unit[] us, Pair<Integer, Integer> pos, ArrayList<Pair<Integer, Integer>> targets) {
-        // Starting at pos, perform a breadth first search for the nearest target
-        HashSet<Pair<Integer, Integer>> seen = new HashSet<>();
-        ArrayDeque<Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>>> toCheck = new ArrayDeque<>();
-        toCheck.add(new Pair(new Pair(pos,0), null));
-
-        Pair<Integer, Integer> result = null;
-        Pair<Integer, Integer> bestMove = null;
-        Integer resultDist = null;
-
+        int position = width/2 + (width / 2 * width);
+        int targetPosition = 0;
         while (true) {
+            // Choose input
+            int dir = (int) (Math.random() * 4 + 1);
+            switch (dir) {
+                case 1:
+                    targetPosition = position - width;
+                    break;
+                case 2:
+                    targetPosition = position + width;
+                    break;
+                case 3:
+                    targetPosition = position - 1;
+                    break;
+                case 4:
+                    targetPosition = position + 1;
+                    break;
+                default:
+                    break;
+            }
+            input.addFirst(dir);
 
-            if (toCheck.isEmpty()) {
+            // Get output
+            output = prog.run(input);
+
+            // Update board
+            long status = output.pollFirst();
+            if (status == 0) {
+                board[targetPosition] = 2;
+            } else if (status == 1) {
+                board[targetPosition] = 1;
+                position = targetPosition;
+            } else if (status == 2) {
+                board[targetPosition] = 3;
                 break;
             }
-
-            Pair<Pair<Pair<Integer, Integer>, Integer>, Pair<Integer, Integer>> points = toCheck.pollFirst();
-            Pair<Integer, Integer> from = points.snd();
-            Pair<Integer, Integer> p = points.fst().fst();
-            Integer dist = points.fst().snd();
-
-            // Check if we are done
-            if (result != null && dist > resultDist) {
-                break;
-            }
-            
-            if (seen.contains(p)) {
-                continue;
-            }
-
-            if (targets.contains(p)) {
-                if (result == null || prio(p, result) < 0) {
-                    result = p;
-                    resultDist = dist;
-                    bestMove = from;
-                }
-            }
-
-            Pair<Integer, Integer> up = new Pair<>(p.fst(), p.snd() - 1);
-            Pair<Integer, Integer> down = new Pair<>(p.fst(), p.snd() + 1);
-            Pair<Integer, Integer> left = new Pair<>(p.fst() - 1, p.snd());
-            Pair<Integer, Integer> right = new Pair<>(p.fst() + 1, p.snd());
-
-            if (!seen.contains(up) && b.getPos(up) == Terrain.G && !occupied(up, us)) {
-                if (from == null) {
-                    toCheck.addLast(new Pair<>(new Pair<>(up, dist + 1), up));
-                } else {
-                    toCheck.addLast(new Pair<>(new Pair<>(up, dist + 1), from));
-                }
-            }
-            if (!seen.contains(left) && b.getPos(left) == Terrain.G && !occupied(left, us)) {
-                if (from == null) {
-                    toCheck.addLast(new Pair<>(new Pair<>(left, dist + 1), left));
-                } else {
-                    toCheck.addLast(new Pair<>(new Pair<>(left, dist + 1), from));
-                }
-            }
-            if (!seen.contains(right) && b.getPos(right) == Terrain.G && !occupied(right, us)) {
-                if (from == null) {
-                    toCheck.addLast(new Pair<>(new Pair<>(right, dist + 1), right));
-                } else {
-                    toCheck.addLast(new Pair<>(new Pair<>(right, dist + 1), from));
-                }
-            }
-            if (!seen.contains(down) && b.getPos(down) == Terrain.G && !occupied(down, us)) {
-                if (from == null) {
-                    toCheck.addLast(new Pair<>(new Pair<>(down, dist + 1), down));
-                } else {
-                    toCheck.addLast(new Pair<>(new Pair<>(down, dist + 1), from));
-                }
-            }
-
-            seen.add(p);
         }
 
-        return bestMove;
+        board[width/2 + (width / 2 * width)] = 4;
+        printGrid(board, width);
+        int count = 0;
+        return "Commands: " + count;
     }
 
-    public static int prio(Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
-        if (a.snd() < b.snd()) {
-            return -1;
-        } else if (a.snd() == b.snd()) {
-            if (a.fst() < b.fst()) {
-                return -1;
-            } else if (a.fst() == b.fst()) {
-                return 0;
-            } else {
-                return 1;
+    public static void printGrid(long[] g, int rowSize) {
+        String output;
+        for (int j = 0; j < rowSize; j++) {
+            output = "";
+            for (int i = 0; i < rowSize; i++) {
+                long p = g[i + rowSize * j];
+                switch ((int) p) {
+                    case 0:
+                        output += " ";
+                        break;
+                    case 1:
+                        output += ".";
+                        break;
+                    case 2:
+                        output += "#";
+                        break;
+                    case 3:
+                        output += "X";
+                        break;
+                    case 4:
+                        output += "D";
+                        break;
+                    default:
+                        break;
+                }
             }
-        } else {
-            return 1;
+            System.out.println(output);
         }
     }
 
-    public static long helper() {
-        return 1;
+    public static String helper(Stream<String> input) {
+        String[] events = input.toArray(String[]::new);
+        int width = events[0].length();
+        long[] board = new long[width*events.length];
+        for (int i = 0; i < board.length; i++) {
+            String row = events[i / width];
+            char c = row.charAt(i % width);
+            switch (c) {
+                case '#':
+                    board[i] = 2;
+                    break;
+                case '.':
+                    board[i] = 1;
+                    break;
+                case 'X':
+                    board[i] = 0;
+                    break;
+            }
+        }
+        return problem2(board, width);
     }
 
-    public static String problem2(long x) {
-        return "1";
+    public static String problem2(long[] board, int width) {
+        int count = 0;
+        while (true) {
+            boolean marked = false;
+            for (int i = 0; i < board.length; i++) {
+                if (board[i] == 1) {
+                    //Check neighbors
+                    if (board[i+1] == 0 || board[i-1] == 0 || board[i + width] == 0 || board[i - width] == 0) {
+                        board[i] = 3;
+                        marked = true;
+                    }
+                }
+            }
+
+            // Check if any spread
+            if (!marked) {
+                break;
+            }
+
+            // Confirm spread
+            for (int i = 0; i < board.length; i++) {
+                if (board[i] == 3) {
+                    board[i] = 0;
+                }
+            }
+            count++;
+        }
+        return "Minutes: " + count;
     }
 }
 
